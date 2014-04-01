@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Adding viewport -->
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta name="viewport" content="width=device-width, user-scalable=no">
+            
+            <!-- Adding jQuery scripts -->
+            <script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
+            
+            <!-- Since jQuery Mobile relies on jQuery core's $.ajax() functionality,
+             $.support.cors & $.mobile.allowCrossDomainPages must be set to true to tell
+             $.ajax to load cross-domain pages. -->
+            <script type="text/javascript">
+                $(document).bind("mobileinit", function() {
+                                 $.support.cors = true;
+                                 $.mobile.allowCrossDomainPages = true;
+                                 });
+                </script>
+            
+            <!-- Adding Phonegap scripts -->
+            <script type="text/javascript" charset="utf-8"
+                src="cordova.js"></script>
+            
+            <!-- Adding jQuery mobile scripts & CSS -->
+            <link rel="stylesheet" href="css/jquery.mobile-1.4.2.min.css" />
+            <script type="text/javascript"
+                src="js/jquery.mobile-1.4.2.min.js"></script>
+
+<script>
+    
+    var employeeNumber = localStorage.getItem("empId");
+    var lat = localStorage.getItem("latitude");
+    var long = localStorage.getItem("longitude");
+    var alt = localStorage.getItem("altitude");
+    var issue = localStorage.getItem("textAreaAnnotation");
+
+function saveInitialGeoLocation(position) {
+    localStorage.setItem("latitude",position.coords.latitude);
+    localStorage.setItem("longitude",position.coords.longitude);
+    localStorage.setItem("altitude",position.coords.altitude);
+    
+}
+function onDeviceReady() {
+    $("#btn").hide();
+    
+    console.log('DeviceReady');
+    
+    
+    navigator.geolocation.getCurrentPosition(saveInitialGeoLocation, onGeoCurrentPositionFail);
+    
+ 
+ 
+}
+function locateMe() {
+    console.log('trying to geolocate.....');
+    navigator.geolocation.getCurrentPosition(onGeoCurrentPositionSuccess, onGeoCurrentPositionFail);
+    
+    
+}
+
+function onGeoCurrentPositionFail(e) {
+                        
+     console.log('onGeoCurrentPositionFail:'+e);
+                        
+}
+
+function onGeoCurrentPositionSuccess(position) {
+    console.log('onGeoCurrentPositionSuccess');
+    
+    $('#latitude').val(position.coords.latitude);
+    $('#longitude').val(position.coords.longitude);
+    $('#altitude').val(position.coords.altitude);
+    
+    $('#accuracy').html('<p>'+position.coords.accuracy+'</p>');
+    
+    $('#altitudeAccuracy').html('<p>'+position.coords.altitudeAccuracy+'</p>');
+    
+    $('#coordsHeading').html('<p>'+position.coords.heading+'</p>');
+    
+    $('#coordsSpeed').html('<p>'+position.coords.speed+'</p>');
+    var ts = new Date(position.timestamp);
+    $('#positionTimestamp').html('<p>'+ts+'</p>');
+ 
+    localStorage.setItem("latitude",position.coords.latitude);
+    localStorage.setItem("longitude",position.coords.longitude);
+    localStorage.setItem("altitude",position.coords.altitude);
+ 
+}
+
+function geolocationPositionChangeSuccess(position) {
+    $('#latitude').val(position.coords.latitude);
+    $('#longitude').val(position.coords.longitude);
+    $('#altitude').val(position.coords.altitude);
+    
+    $('#accuracy').html('<p>'+position.coords.accuracy+'</p>');
+    
+    $('#altitudeAccuracy').html('<p>'+position.coords.altitudeAccuracy+'</p>');
+    
+    $('#coordsHeading').html('<p>'+position.coords.heading+'</p>');
+    
+    $('#coordsSpeed').html('<p>'+position.coords.speed+'</p>');
+    var ts = new Date(position.timestamp);
+    $('#positionTimestamp').html('<p>'+ts+'</p>');
+
+}
+                
+                function geolocationPositionChangeError(e) {
+                    console.log('geolocationPositionChangeError:'+e);
+                }
+                
+                function AJAXError(e) {
+                    console.log('ugh: '+e.statusText);
+                }
+ 
+ 
+ 
+function openIncident() {
+                    var empId=$("#employeeId").val();
+                    localStorage.setItem("empId",empId);
+                    var psswd = $("#passwd").val();
+                    
+                        
+                    // get all field values to create a new incident.
+                    // as the photos/audio/video are collected, they may be sent up any time after
+                    var myUrl = "http://incidentreporting-mysqldb.rhcloud.com/openIncidentReport.php";
+                    
+                    // ask for a session id and reuse it.
+                    console.log('in openincident');
+                    jQuery.ajax({
+                           url: myUrl,
+                           type: "POST",
+                           data: {employeeId: empId,passwd: psswd},
+                           cache: false,
+                           success: function (response) {
+                           var tmp = response;
+                           
+                           if (tmp.authenticated == true) {
+                                localStorage.setItem("mySessionId",tmp.sessionId);
+                                localStorage.setItem("employeeId",empId);
+                                
+                                console.log('session id:'+tmp.sessionId);
+                           $("#incidentNumber").html('<p>'+tmp.sessionId+'</p?');
+                           localStorage.setItem("incidentNumber",tmp.sessionId);
+
+                                
+                           $("#btn").show();
+                           $("#whenAuthenticatedCollapse").hide();
+                           
+                           } else {
+                                console.log('error! not authenticated!');
+                                $("#authMessage").html('<p>error! not authenticated!</p>');
+                           }
+                           },
+                           error : AJAXError
+                           });
+
+                    }
+                
+                 function imageUploadSuccess(r) {
+                    console.log("Code = " + r.responseCode);
+                    console.log("Response = " + r.response);
+                    console.log("Sent = " + r.bytesSent);
+                }
+                
+                function imageUploadFailure(error) {
+                    alert("An error has occurred: Code = " + error.code);
+                    console.log("upload error source " + error.source);
+                    console.log("upload error target " + error.target);                }
+
+// Declare global variables
+var state = 0; // 0 record, 1 stop, 2 playback
+var src = "recording.wav"; // name of auio file
+var mediaRec; // the object for recording and play sound
+var directory; // holds a reference for directory reading
+
+var watchId;  // for tracking geolocation changes
+
+                
+                
+                function getImage() {
+                    // get location
+                    
+                    
+                    navigator.camera.getPicture(uploadPhoto, function(message) {
+                                                console.log('get picture failed');
+                                                },{
+                                                quality: 99,
+                                                destinationType: navigator.camera.DestinationType.FILE_URI,
+                                                sourceType: navigator.camera.PictureSourceType.CAMERA
+                                                }
+                                                );
+                                                
+                }
+                
+                
+                function win1(r) {
+                    console.log("Code = " + r.responseCode);
+                    console.log("Response = " + r.response);
+                    console.log("Sent = " + r.bytesSent);
+                }
+                
+                function fail1(error) {
+                    alert("An error has occurred: Code = " + error.code);
+                    console.log("upload error source " + error.source);
+                    console.log("upload error target " + error.target);
+                }
+                
+                function uploadPhoto(imageURI) {
+                    
+                    navigator.geolocation.getCurrentPosition(onGeoCurrentPositionSuccess, onGeoCurrentPositionFail);
+
+                    var options = new FileUploadOptions();
+                    options.fileKey="file";
+                    options.fileName=imageURI.substr(imageURI.lastIndexOf('/')+1);
+                    options.mimeType="image/jpeg";
+                    
+                    var params = new Object();
+                    params.value1 = "test";
+                    params.value2 = "param";
+                    
+                    options.params = params;
+                    options.chunkedMode = false;
+                    
+                    var ft = new FileTransfer();
+                    ft.onprogress = function(progressEvent) {
+                        if (progressEvent.lengthComputable) {
+                            var perc = Math.floor(progressEvent.loaded / progressEvent.total * 100);
+                            statusDom.innerHTML = perc + "% loaded...";
+                        } else {
+                            if(statusDom.innerHTML == "") {
+                                statusDom.innerHTML = "Loading";
+                            } else {
+                                statusDom.innerHTML += ".";
+                            }
+                        }
+                    };
+                    
+                    
+                    employeeNumber = window.localStorage.getItem("empId");
+                    lat = localStorage.getItem("latitude");
+                    long = localStorage.getItem("longitude");
+                    alt = localStorage.getItem("altitude");
+                    issue = localStorage.getItem("textAreaAnnotation");
+                    
+                    var jnk = "http://incidentreporting-mysqldb.rhcloud.com/upl.php?fn="+options.fileName+
+                    "&employeeNumber="+employeeNumber+
+                    "&sessn="+localStorage.getItem("incidentNumber")+
+                    "&lat="+window.localStorage.getItem("latitude")+
+                    "&long="+window.localStorage.getItem("longitude")+
+                    "&alt="+window.localStorage.getItem("altitude")+
+                    "&issue="+encodeURIComponent(window.localStorage.getItem("textAreaAnnotation"));
+                    $("#clickme").hide();
+                    $("#busy").show();
+                    console.log(jnk);
+//                    ft.upload(imageURI, jnk, imageUploadSuccess, imageUploadFailure, options);
+                    ft.upload(imageURI, jnk, win, fail, options, true);
+
+                }
+
+
+ function uploadVideo(videoURI) {
+                    
+                    navigator.geolocation.getCurrentPosition(onGeoCurrentPositionSuccess, onGeoCurrentPositionFail);
+                   
+                    var options = new FileUploadOptions();
+                    options.fileKey="file";
+                    options.fileName=imageURI.substr(imageURI.lastIndexOf('/')+1);
+                    options.mimeType="video/mpeg";
+                    
+                    var params = new Object();
+                    params.value1 = "test";
+                    params.value2 = "param";
+                    
+                    options.params = params;
+                    options.chunkedMode = false;
+                    
+                    var ft = new FileTransfer();
+                    var employeeNumber = '12345';
+                    
+                    
+                    var jnk = "http://mysqldb.ca/reporting/upl.php?fn="+options.fileName+"&employeeNumber="+employeeNumber;
+                    $("#clickme").hide();
+                    $("#busy").show();
+                    
+                    ft.upload(imageURI, jnk, win, fail, options);
+                    
+                }
+                
+                function win(r) {
+                    console.log("Code = " + r.responseCode.toString()+"\n");
+                    console.log("Response = " + r.response.toString()+"\n");
+                    console.log("Sent = " + r.bytesSent.toString()+"\n");
+                    $("#clickme").show();
+                    $("#busy").hide();
+                }
+                function fail(error) {
+                    console.log("An error has occurred: Code = " + error.code);
+                    
+                }
+                
+                function onGeoCurrentPositionFail(error) {
+                    console.log("An error has occurred: Code = " + error.code);
+                    
+                }
+                
+                function onGeoCurrentPositionSuccess(position) {
+                    
+                    element = document.getElementById('latitude');
+                    element.innerHTML = position.coords.latitude;
+                    element = document.getElementById('longitude');
+                    element.innerHTML = position.coords.longitude;
+                    element = document.getElementById('altitude');
+                    element.innerHTML = position.coords.altitude;
+
+                    element = document.getElementById('accuracy');
+                    element.innerHTML = position.coords.accuracy;
+                    
+                    element = document.getElementById('altitudeAccuracy');
+                    element.innerHTML = position.coords.altitudeAccuracy;
+                    
+                    element = document.getElementById('coordsHeading');
+                    element.innerHTML = position.coords.heading;
+                    
+                    element = document.getElementById('coordsSpeed');
+                    element.innerHTML = position.coords.speed;
+                    
+                    element = document.getElementById('positionTimestamp');
+                    element.innerHTML = new Date(position.timestamp);
+                    var ts =new Date(position.timestamp);
+                    
+                    console.log('lat :'+position.coords.latitude);
+                    console.log('long :'+position.coords.longitude);
+                    console.log('alt :'+position.coords.altitude);
+                    console.log('accuracy :'+position.coords.accuracy);
+                    console.log('altitudeAccuracy :'+position.coords.altitudeAccuracy);
+                    console.log('heading :'+position.coords.heading);
+                    console.log('speed :'+position.coords.speed);
+                    console.log('positionTimestamp :'+ts);
+                    
+                    localStorage.setItem("lat", position.coords.latitude);
+                    localStorage.setItem("long", position.coords.longitude);
+                    localStorage.setItem("alt", position.coords.altitude);
+
+
+
+
+                    $("#busy").hide();
+                    
+                    
+                    
+                }
+                function hitPage3() {
+                    $('#pb').progressbar({ value: 85 });
+                }
+                
+                function onSuccess() {
+                    console.log("onSuccess()");
+                }
+                
+                function onError(error) {
+                    alert('onError(): '    + error.code    + '\n' + 
+                          'message: ' + error.message + '\n');
+                }
+                
+                function writeIncidentText() {
+                    var junk = $("textAreaAnnotation").val();
+                    localStorage.setItem("IncidentText",junk);
+                    
+                    //hitPage3();
+                }
+                
+                function captureAudioSuccess(mediaFiles) {
+                    var i, len;
+                    for (i = 0, len = mediaFiles.length; i < len; i += 1) {
+                        uploadFile(mediaFiles[i]);
+                    }
+                }
+                
+                // Called if something bad happens.
+                //
+                function captureAudioError(error) {
+                    var msg = 'An error occurred during capture: ' + error.code;
+                    navigator.notification.alert(msg, null, 'Uh oh!');
+                }
+                
+                // A button will call this function
+                //
+                function captureAudio() {
+                    navigator.geolocation.getCurrentPosition(onGeoCurrentPositionSuccess, onGeoCurrentPositionFail);
+                    // Launch device audio recording application,
+                    // allowing user to capture up to 2 audio clips
+                    navigator.device.capture.captureAudio(captureAudioSuccess, captureAudioError, {limit: 1});
+                }
+                
+                // Upload files to server
+                function uploadFile(mediaFile) {
+
+                    var ft = new FileTransfer(),
+                    path = mediaFile.fullPath,
+                    name = mediaFile.name;
+                    
+var junk = "http://mysqldb.ca/reporting/upl1.php?fn="+name+
+"&employeeNumber="+employeeNumber+
+"&lat="+encodeURIComponent(lat)+
+"&long="+encodeURIComponent(long)+
+"&alt="+encodeURIComponent(alt)+
+"&issue="+encodeURIComponent(issue);
+console.log(junk);
+                    ft.upload(path,
+                              junk,
+                              function(result) {
+                              console.log('Upload success: ' + result.responseCode);
+                              console.log('Id of record written: ' + result.recNum);
+
+                              console.log(result.bytesSent + ' bytes sent');
+                              },
+                              function(error) {
+                              console.log('Error uploading file ' + path + ': ' + error.code);
+                              },
+                              { fileName: name });   
+                }
+                
+                    </script>
+</head>
+
+<body">
+
+
+<div data-role="page" id="page1">
+    <div data-role="header">
+        <h1>Mobile Incident Report</h1>
+    </div>    <div role="main" class="ui-content">
+        <div id="whenAuthenticatedCollapse">
+        <p>To begin collecting data, enter your 5 digit employee id, and click below.</p>
+        <input type = "text" id="employeeId" name="employeeId" >
+            <input type = "password" id="passwd" name="passwd">
+                <div id="notOk" name="notOk"></div>
+                <div id="isOk" name="isOk"></div>
+                    <a  data-role="button"
+                        data-icon="arrow-r"
+                        data-iconpos="right"
+                        data-theme="a"
+                        onclick="openIncident(); return false">
+                        AUTHENTICATE
+                    </a>
+                    <div id="authMessage" name="authMessage"></div>
+                    <br>
+                    <br>
+                     <button id="locate" name="locate" onClick="locateMe()">GEOLOCATE</button>
+                     
+                     <div id="incidentNumber" name="incidentNumber"></div>
+                     <div id="latitude" name="latitude"></div>
+                     <div id="longitude" name="longitude"></div>
+                     <div id="altitude" name="altitude"></div>
+                     <div id="accuracy" name="accuracy"></div>
+                     <div id="altitudeAccuracy" name="altitudeAccuracy"></div>
+                     <div id="coordsHeading" name="coordsHeading"></div>
+                     <div id="coordsSpeed" name="coordsSpeed"></div>
+                     <div id="positionTimestamp" name="positionTimestamp"></div>
+
+                   
+        </div>
+        
+    </div>
+</div><div data-role="footer">
+<div id="progressbar1"></div>
+</div>
+
+    <div id="btn">
+        <a href="#page2" data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">Go To Page 2</a></div>
+</div>
+<div data-role="page" id="page2">
+    <div data-role="header"><h1>Page 2: Incident Menu</h1></div>
+    <div role="main" class="ui-content">
+        <div id="incidentNumber" name="incidentNumber"></div>
+        
+        Please enter some text:<input type = "textarea" id="textAreaAnnotation" name="textAreaAnnotation">
+            <a  data-role="button"
+                data-icon="arrow-r"
+                data-iconpos="right"
+                data-theme="a"
+                onclick="writeIncidentText(); return false">
+                Save Incident Text
+            </a>
+
+        <a href="#page3"  data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">Take Photo</a>
+        <a href="#page4"  data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">Take Video</a>
+        <a href="#page5"  data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">Record Audio</a>
+    </div>
+</div>
+
+<div data-role="page" id="page3">
+    <div data-role="header"><h1>Page 3: Incident Report Photos</h1></div>
+    <div role="main" class="ui-content">
+        <div id="incidentNumber" name="incidentNumber"></div><br><br>
+        
+            <button onclick="getImage()" id="snapPhoto" name="snapPhoto">Snap Photo</button>
+            <div id="loadingstatus"></div>
+            <div id="busy"></div>
+            
+            <div id="statusDom"></div>
+            <div id="loadingStatus"></div>
+           
+            <a href="#page2" data-rel="back" data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">To Page2</a>
+            <a href="#page4"  data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">To Page4</a>
+            </div><div data-role="footer">
+
+<div id="pb"></div>
+
+            </div>
+</div>
+
+<div data-role="page" id="page4">
+    <div data-role="header"><h1>Page 4: Incident Report Audio</h1></div>
+    <div role="main" class="ui-content">
+        <div id="incidentNumber" name="incidentNumber"></div><br><br>
+        
+        <button onclick="captureAudio()" id="recordAudio" name="recordAudio">Record Audio</button>
+        <a href="#page3" data-rel="back" data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">To Page3</a>
+        <a href="#page5"  data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">To Page5</a>
+    </div>
+</div>
+
+<div data-role="page" id="page5">
+    <div data-role="header"><h1>Page 5: Incident Report Video </h1></div>
+    <div role="main" class="ui-content">
+        <div id="incidentNumber" name="incidentNumber"></div><br><br>
+        
+        <button id="recordVideo" name="recordVideo">Record video</button>
+        <a href="#page4" data-rel="back" data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">To Page4</a>
+        <a href="#page6" data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">To Page6</a>
+    </div>
+</div>
+
+<div data-role="page" id="page5">
+    <div data-role="header"><h1>Page 6: Incident Report Wrapup</h1></div>
+    <div role="main" class="ui-content">
+       
+        <a href="#page4" data-rel="back" data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">To Page5</a>
+        <a href="#page1" data-transition="slide" class="ui-btn ui-corner-all ui-btn-inline">Create Another Incident Report</a>
+    </div>
+</div>
+
+<script>
+    
+    onerror = function(message, url, lineNumber)
+    {
+        console.log("Error: "+message+" in "+url+" at line "+lineNumber);
+    }
+
+document.addEventListener('deviceready', onDeviceReady, false);
+</script>
+
+    </body>
+</html>
+
+
